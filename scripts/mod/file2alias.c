@@ -42,9 +42,15 @@ typedef struct {
 typedef struct {
 	__u8 b[16];
 } uuid_le;
+
 typedef struct {
 	__u8 b[16];
-} uuid_t;
+} compat_uuid_t;
+
+#ifdef __APPLE__
+#define uuid_t compat_uuid_t
+#endif
+
 #define	UUID_STRING_LEN		36
 
 /* Big exception to the "don't include kernel headers into userspace, which

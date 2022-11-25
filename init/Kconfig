@@ -50,7 +50,7 @@ config LD_IS_BFD
 config LD_VERSION
 	int
 	default $(ld-version) if LD_IS_BFD
-	default 0
+	default 13
 
 config LD_IS_LLD
 	def_bool $(success,test "$(ld-name)" = LLD)

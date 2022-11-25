@@ -54,6 +54,19 @@ static unsigned int nr_unresolved;
 
 #define MODULE_NAME_LEN (64 - sizeof(Elf_Addr))
 
+static char *strsep(char **stringp, const char *delim)
+{
+	char *rv = *stringp;
+	if (rv) {
+		*stringp += strcspn(*stringp, delim);
+		if (**stringp)
+			*(*stringp)++ = '\0';
+		else
+			*stringp = 0;
+	}
+	return rv;
+}
+
 void __attribute__((format(printf, 2, 3)))
 modpost_log(enum loglevel loglevel, const char *fmt, ...)
 {

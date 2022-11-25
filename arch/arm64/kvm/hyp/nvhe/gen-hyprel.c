@@ -25,7 +25,7 @@
  */
 
 #include <elf.h>
-#include <endian.h>
+#include <machine/endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>

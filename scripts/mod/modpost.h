@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <elf.h>
+#include <linux/limits.h>
 
 #include "list.h"
 #include "elfconfig.h"
