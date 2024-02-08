@@ -37,6 +37,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "endian.h"
+
 #include <generated/autoconf.h>
 
 #define HYP_SECTION_PREFIX		".hyp"
