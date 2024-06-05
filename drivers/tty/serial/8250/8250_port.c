@@ -3488,7 +3488,7 @@ static unsigned int probe_baud(struct uart_port *port)
 	return (port->uartclk / 16) / quot;
 }
 
-int serial8250_console_setup(struct uart_port *port, char *options, bool probe)
+int serial8250_console_setup(struct uart_port *port, char *options)
 {
 	int baud = 9600;
 	int bits = 8;
@@ -3506,7 +3506,7 @@ int serial8250_console_setup(struct uart_port *port, char *options, bool probe)
 	if (options) {
 		pr_info("ownia: do options");
 		uart_parse_options(options, &baud, &parity, &bits, &flow);
-	} else if (probe) {
+	} else {
 		pr_info("ownia: do probe");
 		baud = probe_baud(port);
 	}

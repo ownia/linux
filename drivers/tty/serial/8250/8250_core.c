@@ -631,7 +631,7 @@ static int univ8250_console_setup(struct console *co, char *options)
 	/* link port to console */
 	port->cons = co;
 
-	retval = serial8250_console_setup(port, options, false);
+	retval = serial8250_console_setup(port, options);
 	if (retval != 0)
 		port->cons = NULL;
 	return retval;
@@ -694,7 +694,7 @@ static int univ8250_console_match(struct console *co, char *name, int idx,
 
 		co->index = i;
 		port->cons = co;
-		return serial8250_console_setup(port, options, true);
+		return serial8250_console_setup(port, options);
 	}
 
 	return -ENODEV;
