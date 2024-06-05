@@ -101,6 +101,7 @@ EXPORT_SYMBOL(uart_add_one_port);
 
 void uart_remove_one_port(struct uart_driver *drv, struct uart_port *port)
 {
+	pr_info("ownia: uart remove one port");
 	serial_ctrl_unregister_port(drv, port);
 }
 EXPORT_SYMBOL(uart_remove_one_port);

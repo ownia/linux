@@ -3230,6 +3230,7 @@ static void serial_core_remove_one_port(struct uart_driver *drv,
 			  uart_port, uport);
 
 	if (!uart_port) {
+		pr_info("ownia: non uart_port");
 		mutex_unlock(&port->mutex);
 		return;
 	}
@@ -3249,6 +3250,8 @@ static void serial_core_remove_one_port(struct uart_driver *drv,
 	/*
 	 * If the port is used as a console, unregister it
 	 */
+	pr_info("ownia: test uart console");
+	pr_info("ownia: %d %d", uport->cons->index, uport->line);
 	if (uart_console(uport))
 		unregister_console(uport->cons);
 

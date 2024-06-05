@@ -2390,6 +2390,8 @@ static int __add_preferred_console(const char *name, const short idx, char *opti
 	struct console_cmdline *c;
 	int i;
 
+	pr_info("ownia: add %s %s", name, options);
+
 	/*
 	 * We use a signed short index for struct console for device drivers to
 	 * indicate a not yet assigned index or port. However, a negative index
@@ -2471,6 +2473,7 @@ static int __init console_setup(char *str)
 	options = strchr(str, ',');
 	if (options)
 		*(options++) = 0;
+	pr_info("ownia: console_setup %s", str);
 #ifdef __sparc__
 	if (!strcmp(str, "ttya"))
 		strcpy(buf, "ttyS0");
@@ -2483,6 +2486,7 @@ static int __init console_setup(char *str)
 	idx = simple_strtoul(s, NULL, 10);
 	*s = 0;
 
+	pr_info("ownia: console_setup %s %d %s %s", buf, idx, options, brl_options);
 	__add_preferred_console(buf, idx, options, brl_options, true);
 	return 1;
 }
@@ -3278,9 +3282,12 @@ static int try_enable_preferred_console(struct console *newcon,
 	struct console_cmdline *c;
 	int i, err;
 
+	pr_info("ownia: try %s %d %d", newcon->name, newcon->index, user_specified);
+
 	for (i = 0, c = console_cmdline;
 	     i < MAX_CMDLINECONSOLES && c->name[0];
 	     i++, c++) {
+		printk("ownia: match %s %d", c->name, c->index);
 		if (c->user_specified != user_specified)
 			continue;
 		if (!newcon->match ||
@@ -3316,12 +3323,16 @@ static int try_enable_preferred_console(struct console *newcon,
 	if (newcon->flags & CON_ENABLED && c->user_specified ==	user_specified)
 		return 0;
 
+	pr_info("ownia: try failed");
+
 	return -ENOENT;
 }
 
 /* Try to enable the console unconditionally */
 static void try_enable_default_console(struct console *newcon)
 {
+	pr_info("ownia: try enable default console");
+
 	if (newcon->index < 0)
 		newcon->index = 0;
 
@@ -3438,6 +3449,9 @@ void register_console(struct console *newcon)
 			bootcon_registered = true;
 		else
 			realcon_registered = true;
+
+		pr_info("ownia: name %s index %d %d %d", con->name, con->index,
+				bootcon_registered, realcon_registered);
 	}
 
 	/* Do not register boot consoles when there already is a real one. */
@@ -3479,11 +3493,14 @@ void register_console(struct console *newcon)
 	err = try_enable_preferred_console(newcon, true);
 
 	/* If not, try to match against the platform default(s) */
-	if (err == -ENOENT)
+	if (err == -ENOENT) {
+		pr_info("ownia: cmdline failed");
 		err = try_enable_preferred_console(newcon, false);
+	}
 
 	/* printk() messages are not printed to the Braille console. */
 	if (err || newcon->flags & CON_BRL) {
+		pr_info("ownia: platform default failed");
 		if (newcon->flags & CON_NBCON)
 			nbcon_free(newcon);
 		goto unlock;
@@ -3613,6 +3630,7 @@ int unregister_console(struct console *console)
 	int res;
 
 	console_list_lock();
+	pr_info("ownia: unreg console %pS", __builtin_return_address(0));
 	res = unregister_console_locked(console);
 	console_list_unlock();
 	return res;

@@ -3490,6 +3490,7 @@ static int __init con_init(void)
 	console_unlock();
 
 #ifdef CONFIG_VT_CONSOLE
+	pr_info("ownia: con_init() call register_console()");
 	register_console(&vt_console_driver);
 #endif
 	return 0;

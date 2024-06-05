@@ -3496,13 +3496,22 @@ int serial8250_console_setup(struct uart_port *port, char *options, bool probe)
 	int flow = 'n';
 	int ret;
 
+	pr_info("ownia: setup options %s", options);
+	dump_stack();
+
 	if (!port->iobase && !port->membase)
 		return -ENODEV;
 
-	if (options)
+	pr_info("ownia: iobase %lu %lu", port->iobase, port->membase);
+	if (options) {
+		pr_info("ownia: do options");
 		uart_parse_options(options, &baud, &parity, &bits, &flow);
-	else if (probe)
+	} else if (probe) {
+		pr_info("ownia: do probe");
 		baud = probe_baud(port);
+	}
+
+	pr_err("ownia: setup baud %d", baud);
 
 	ret = uart_set_options(port, port->cons, baud, parity, bits, flow);
 	if (ret)

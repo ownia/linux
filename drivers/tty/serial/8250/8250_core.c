@@ -606,6 +606,8 @@ static int univ8250_console_setup(struct console *co, char *options)
 	struct uart_port *port;
 	int retval, i;
 
+	pr_info("ownia: ->setup %s", options);
+
 	/*
 	 * Check whether an invalid uart number has been specified, and
 	 * if so, search for the first available port that does have
@@ -668,6 +670,8 @@ static int univ8250_console_match(struct console *co, char *name, int idx,
 	unsigned char iotype;
 	resource_size_t addr;
 	int i;
+
+	pr_info("ownia: ->match %s %d %s", name, idx, options);
 
 	if (strncmp(name, match, 4) != 0)
 		return -ENODEV;
@@ -1036,8 +1040,10 @@ int serial8250_register_8250_port(const struct uart_8250_port *up)
 	if (uart->port.type != PORT_8250_CIR) {
 		struct mctrl_gpios *gpios;
 
-		if (uart->port.dev)
-			uart_remove_one_port(&serial8250_reg, &uart->port);
+		if (uart->port.dev) {
+			pr_info("ownia: rebuild");
+			uart_remove_one_port(&serial8250_reg, &uart->port);\
+		}
 
 		uart->port.ctrl_id	= up->port.ctrl_id;
 		uart->port.port_id	= up->port.port_id;
@@ -1198,6 +1204,7 @@ void serial8250_unregister_port(int line)
 		uart_port_unlock_irqrestore(&uart->port, flags);
 	}
 
+	pr_info("ownia: 8250 unregister");
 	uart_remove_one_port(&serial8250_reg, &uart->port);
 	if (serial8250_isa_devs) {
 		uart->port.flags &= ~UPF_BOOT_AUTOCONF;
