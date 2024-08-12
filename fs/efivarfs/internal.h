@@ -9,9 +9,12 @@
 #include <linux/list.h>
 #include <linux/efi.h>
 
+#define LINUX_EFI_RUNTIME_DEBUG_VARIABLE_GUID	EFI_GUID(0x0207a72e, 0xe13f, 0x41f2,  0x83, 0xc2, 0x0f, 0x41, 0xea, 0x4a, 0xe0, 0xd3)
+
 struct efivarfs_mount_opts {
 	kuid_t uid;
 	kgid_t gid;
+	bool refresh;
 };
 
 struct efivarfs_fs_info {

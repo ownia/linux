@@ -394,6 +394,8 @@ int efivar_init(int (*func)(efi_char16_t *, efi_guid_t, unsigned long, void *,
 	 * is 512.
 	 */
 
+	pr_err("ownia search");
+
 	do {
 		variable_name_size = 512;
 		BUILD_BUG_ON(EFI_VAR_NAME_LEN < 512);

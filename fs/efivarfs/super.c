@@ -17,6 +17,7 @@
 #include <linux/statfs.h>
 #include <linux/notifier.h>
 #include <linux/printk.h>
+#include <linux/proc_fs.h>
 
 #include "internal.h"
 
@@ -56,6 +57,8 @@ static int efivarfs_show_options(struct seq_file *m, struct dentry *root)
 	if (!gid_eq(opts->gid, GLOBAL_ROOT_GID))
 		seq_printf(m, ",gid=%u",
 				from_kgid_munged(&init_user_ns, opts->gid));
+	if (opts->refresh)
+		seq_printf(m, ",refresh");
 	return 0;
 }
 
@@ -67,6 +70,8 @@ static int efivarfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	u64 storage_space, remaining_space, max_variable_size;
 	u64 id = huge_encode_dev(dentry->d_sb->s_dev);
 	efi_status_t status;
+
+	pr_err("ownia statfs");
 
 	/* Some UEFI firmware does not implement QueryVariableInfo() */
 	storage_space = remaining_space = 0;
@@ -198,6 +203,9 @@ static int efivarfs_callback(efi_char16_t *name16, efi_guid_t vendor,
 	int err = -ENOMEM;
 	bool is_removable = false;
 
+	if (guid_equal(&vendor, &LINUX_EFI_RUNTIME_DEBUG_VARIABLE_GUID))
+		pr_err("ownia EFIRuntime callback");
+
 	if (guid_equal(&vendor, &LINUX_EFI_RANDOM_SEED_TABLE_GUID))
 		return 0;
 
@@ -229,6 +237,9 @@ static int efivarfs_callback(efi_char16_t *name16, efi_guid_t vendor,
 	/* replace invalid slashes like kobject_set_name_vargs does for /sys/firmware/efi/vars. */
 	strreplace(name, '/', '!');
 
+	if (guid_equal(&vendor, &LINUX_EFI_RUNTIME_DEBUG_VARIABLE_GUID))
+		pr_err("ownia %s", name);
+
 	inode = efivarfs_get_inode(sb, d_inode(root), S_IFREG | 0644, 0,
 				   is_removable);
 	if (!inode)
@@ -239,6 +250,9 @@ static int efivarfs_callback(efi_char16_t *name16, efi_guid_t vendor,
 		err = PTR_ERR(dentry);
 		goto fail_inode;
 	}
+
+	if (guid_equal(&vendor, &LINUX_EFI_RUNTIME_DEBUG_VARIABLE_GUID))
+		pr_err("ownia callback success");
 
 	__efivar_entry_get(entry, NULL, &size, NULL);
 	__efivar_entry_add(entry, list);
@@ -271,12 +285,13 @@ static int efivarfs_destroy(struct efivar_entry *entry, void *data)
 }
 
 enum {
-	Opt_uid, Opt_gid,
+	Opt_uid, Opt_gid, Opt_refresh
 };
 
 static const struct fs_parameter_spec efivarfs_parameters[] = {
-	fsparam_u32("uid", Opt_uid),
-	fsparam_u32("gid", Opt_gid),
+	fsparam_u32("uid",	Opt_uid),
+	fsparam_u32("gid",	Opt_gid),
+	fsparam_flag("refresh",	Opt_refresh),
 	{},
 };
 
@@ -302,9 +317,50 @@ static int efivarfs_parse_param(struct fs_context *fc, struct fs_parameter *para
 		if (!gid_valid(opts->gid))
 			return -EINVAL;
 		break;
+	case Opt_refresh:
+		opts->refresh = true;
+		break;
 	default:
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+static ssize_t efivarfs_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+{
+	int value = 0;
+	int len = 8;
+	char bbuf[8];
+	struct super_block *sb = pde_data(file_inode(file));
+
+	value = atomic_read(&sb->s_active);
+	len = sprintf(bbuf, "%d\n", value);
+	return simple_read_from_buffer(buf, count, ppos, bbuf, len);
+}
+
+static ssize_t efivarfs_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos)
+{
+	struct super_block *sb = pde_data(file_inode(file));
+
+	pr_err("ownia dec s_active to %d", atomic_dec_return(&sb->s_active));
+
+	return count;
+}
+
+static struct proc_ops efivarfs_fops = {
+	.proc_read = efivarfs_read,
+	.proc_write = efivarfs_write,
+};
+
+static int efivarfs_refresh(struct efivarfs_fs_info *sfi, struct super_block *sb)
+{
+	int ret = 0;
+
+	remove_proc_entry("efivarfs", NULL);
+	if (!proc_create_data("efivarfs", 0660, NULL, &efivarfs_fops, sb))
+		ret = -1;
+	pr_err("ownia refresh %d", ret);
 
 	return 0;
 }
@@ -315,6 +371,8 @@ static int efivarfs_fill_super(struct super_block *sb, struct fs_context *fc)
 	struct inode *inode = NULL;
 	struct dentry *root;
 	int err;
+
+	pr_err("ownia fill super");
 
 	sb->s_maxbytes          = MAX_LFS_FILESIZE;
 	sb->s_blocksize         = PAGE_SIZE;
@@ -343,6 +401,8 @@ static int efivarfs_fill_super(struct super_block *sb, struct fs_context *fc)
 	if (err)
 		return err;
 
+	err = efivarfs_refresh(sfi, sb);
+
 	return efivar_init(efivarfs_callback, sb, &sfi->efivarfs_list);
 }
 
@@ -357,6 +417,8 @@ static int efivarfs_reconfigure(struct fs_context *fc)
 		pr_err("Firmware does not support SetVariableRT. Can not remount with rw\n");
 		return -EINVAL;
 	}
+
+	pr_err("ownia reconfig");
 
 	return 0;
 }
@@ -391,9 +453,12 @@ static int efivarfs_init_fs_context(struct fs_context *fc)
 static void efivarfs_kill_sb(struct super_block *sb)
 {
 	struct efivarfs_fs_info *sfi = sb->s_fs_info;
+	int ret = 0;
 
-	blocking_notifier_chain_unregister(&efivar_ops_nh, &sfi->nb);
+	ret = blocking_notifier_chain_unregister(&efivar_ops_nh, &sfi->nb);
 	kill_litter_super(sb);
+
+	pr_err("ownia kill sb %d", ret);
 
 	/* Remove all entries and destroy */
 	efivar_entry_iter(efivarfs_destroy, &sfi->efivarfs_list, NULL);
