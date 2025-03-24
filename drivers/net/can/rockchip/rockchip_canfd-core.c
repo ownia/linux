@@ -50,6 +50,11 @@ static const struct rkcanfd_devtype_data rkcanfd_devtype_data_rk3568v3 = {
 		RKCANFD_QUIRK_CANFD_BROKEN,
 };
 
+static const struct rkcanfd_devtype_data rkcanfd_devtype_data_rk3588 = {
+	.model = RKCANFD_MODEL_RK3588,
+	// .quirks = RKCANFD_QUIRK_CANFD_BROKEN,
+};
+
 static const char *__rkcanfd_get_model_str(enum rkcanfd_model model)
 {
 	switch (model) {
@@ -57,6 +62,8 @@ static const char *__rkcanfd_get_model_str(enum rkcanfd_model model)
 		return "rk3568v2";
 	case RKCANFD_MODEL_RK3568V3:
 		return "rk3568v3";
+	case RKCANFD_MODEL_RK3588:
+		return "rk3588";
 	}
 
 	return "<unknown>";
@@ -853,6 +860,9 @@ static const struct of_device_id rkcanfd_of_match[] = {
 		.compatible = "rockchip,rk3568v3-canfd",
 		.data = &rkcanfd_devtype_data_rk3568v3,
 	}, {
+		.compatible = "rockchip,can-2.0",
+		.data = &rkcanfd_devtype_data_rk3588,
+	}, {
 		/* sentinel */
 	},
 };
@@ -907,15 +917,17 @@ static int rkcanfd_probe(struct platform_device *pdev)
 	priv->can.data_bittiming_const = &rkcanfd_data_bittiming_const;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
 		CAN_CTRLMODE_BERR_REPORTING;
+	match = device_get_match_data(&pdev->dev);
+	if (match)
+		priv->devtype_data = *(struct rkcanfd_devtype_data *)match;
 	if (!(priv->devtype_data.quirks & RKCANFD_QUIRK_CANFD_BROKEN))
 		priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD;
+	if (priv->devtype_data.model == RKCANFD_MODEL_RK3588)
+		priv->can.ctrlmode_supported |= CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_3_SAMPLES;
 	priv->can.do_set_mode = rkcanfd_set_mode;
 	priv->can.do_get_berr_counter = rkcanfd_get_berr_counter;
 	priv->ndev = ndev;
 
-	match = device_get_match_data(&pdev->dev);
-	if (match)
-		priv->devtype_data = *(struct rkcanfd_devtype_data *)match;
 
 	err = can_rx_offload_add_manual(ndev, &priv->offload,
 					RKCANFD_NAPI_WEIGHT);
